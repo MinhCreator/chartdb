@@ -1,9 +1,9 @@
 <h1 align="center">
   <a href="https://chartdb.io#gh-light-mode-only">
-    <img src="https://github.com/chartdb/chartdb/blob/main/src/assets/logo-light.png" width="400" height="70" alt="ChartDB">
+    <img src="https://github.com/MinhCreator/chartdb/blob/main/src/assets/logo-light.png" width="400" height="70" alt="ChartDB">
   </a>
   <a href="https://chartdb.io##gh-dark-mode-only">
-    <img src="https://github.com/chartdb/chartdb/blob/main/src/assets/logo-dark.png" width="400" height="70" alt="ChartDB">
+    <img src="https://github.com/MinhCreator/chartdb/blob/main/src/assets/logo-dark.png" width="400" height="70" alt="ChartDB">
   </a>
   <br>
 </h1>
@@ -21,10 +21,10 @@
 </h3>
 
 <h4 align="center">
-  <a href="https://github.com/chartdb/chartdb?tab=AGPL-3.0-1-ov-file#readme">
-    <img src="https://img.shields.io/github/license/chartdb/chartdb?color=blue" alt="ChartDB is released under the AGPL license." />
+  <a href="https://github.com/MinhCreator/chartdb?tab=AGPL-3.0-1-ov-file#readme">
+    <img src="https://img.shields.io/github/license/MinhCreator/chartdb?color=blue" alt="ChartDB is released under the AGPL license." />
   </a>
-  <a href="https://github.com/chartdb/chartdb/blob/main/CONTRIBUTING.md">
+  <a href="https://github.com/MinhCreator/chartdb/blob/main/CONTRIBUTING.md">
     <img src="https://img.shields.io/badge/PRs-Welcome-brightgreen" alt="PRs welcome!" />
   </a>
   <a href="https://discord.gg/QeFwyWSKwC">
@@ -150,7 +150,7 @@ VITE_LLM_MODEL_NAME=Qwen/Qwen2.5-32B-Instruct-AWQ
 ## 💚 Community & Support
 
 - [Discord](https://discord.gg/QeFwyWSKwC) (For live discussion with the community and the ChartDB team)
-- [GitHub Issues](https://github.com/chartdb/chartdb/issues) (For any bugs and errors you encounter using ChartDB)
+- [GitHub Issues](https://github.com/MinhCreator/chartdb/issues) (For any bugs and errors you encounter using ChartDB)
 - [Twitter](https://x.com/intent/follow?screen_name=jonathanfishner) (Get news fast)
 
 ## Contributing
