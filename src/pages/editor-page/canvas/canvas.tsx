@@ -26,6 +26,7 @@ import {
     Controls,
     useReactFlow,
     useKeyPress,
+    SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import equal from 'fast-deep-equal';
@@ -310,6 +311,7 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
         endFloatingEdgeCreation,
         hoveringTableId,
         hideCreateRelationshipNode,
+        closeRelationshipPopover,
         events: canvasEvents,
     } = useCanvas();
     const { filter, loading: filterLoading } = useDiagramFilter();
@@ -405,31 +407,47 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             {} as Record<string, number>
         );
 
-        setEdges([
-            ...relationships.map(
-                (relationship): RelationshipEdgeType => ({
-                    id: relationship.id,
-                    source: relationship.sourceTableId,
-                    target: relationship.targetTableId,
-                    sourceHandle: `${LEFT_HANDLE_ID_PREFIX}${relationship.sourceFieldId}`,
-                    targetHandle: `${TARGET_ID_PREFIX}${targetIndexes[`${relationship.targetTableId}${relationship.targetFieldId}`]++}_${relationship.targetFieldId}`,
-                    type: 'relationship-edge',
-                    data: { relationship },
-                })
-            ),
-            ...dependencies.map(
-                (dep): DependencyEdgeType => ({
-                    id: dep.id,
-                    source: dep.dependentTableId,
-                    target: dep.tableId,
-                    sourceHandle: `${TOP_SOURCE_HANDLE_ID_PREFIX}${dep.dependentTableId}`,
-                    targetHandle: `${TARGET_DEP_PREFIX}${targetDepIndexes[dep.tableId]++}_${dep.tableId}`,
-                    type: 'dependency-edge',
-                    data: { dependency: dep },
-                    hidden: !showDBViews,
-                })
-            ),
-        ]);
+        setEdges((prevEdges) => {
+            // Create a map of previous edge states to preserve selection
+            const prevEdgeStates = new Map(
+                prevEdges.map((edge) => [
+                    edge.id,
+                    { selected: edge.selected, animated: edge.animated },
+                ])
+            );
+
+            return [
+                ...relationships.map((relationship): RelationshipEdgeType => {
+                    const prevState = prevEdgeStates.get(relationship.id);
+                    return {
+                        id: relationship.id,
+                        source: relationship.sourceTableId,
+                        target: relationship.targetTableId,
+                        sourceHandle: `${LEFT_HANDLE_ID_PREFIX}${relationship.sourceFieldId}`,
+                        targetHandle: `${TARGET_ID_PREFIX}${targetIndexes[`${relationship.targetTableId}${relationship.targetFieldId}`]++}_${relationship.targetFieldId}`,
+                        type: 'relationship-edge',
+                        data: { relationship },
+                        selected: prevState?.selected ?? false,
+                        animated: prevState?.animated ?? false,
+                    };
+                }),
+                ...dependencies.map((dep): DependencyEdgeType => {
+                    const prevState = prevEdgeStates.get(dep.id);
+                    return {
+                        id: dep.id,
+                        source: dep.dependentTableId,
+                        target: dep.tableId,
+                        sourceHandle: `${TOP_SOURCE_HANDLE_ID_PREFIX}${dep.dependentTableId}`,
+                        targetHandle: `${TARGET_DEP_PREFIX}${targetDepIndexes[dep.tableId]++}_${dep.tableId}`,
+                        type: 'dependency-edge',
+                        data: { dependency: dep },
+                        hidden: !showDBViews,
+                        selected: prevState?.selected ?? false,
+                        animated: prevState?.animated ?? false,
+                    };
+                }),
+            ];
+        });
     }, [relationships, dependencies, setEdges, showDBViews]);
 
     useEffect(() => {
@@ -630,21 +648,26 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
     }, [tempFloatingEdge?.sourceNodeId, setNodes]);
 
     const prevFilter = useRef<DiagramFilter | undefined>(undefined);
+    const prevShowDBViews = useRef<boolean>(showDBViews);
     useEffect(() => {
-        if (!equal(filter, prevFilter.current)) {
+        if (
+            !equal(filter, prevFilter.current) ||
+            showDBViews !== prevShowDBViews.current
+        ) {
             debounce(() => {
                 const overlappingTablesInDiagram = findOverlappingTables({
-                    tables: tables.filter((table) =>
-                        filterTable({
-                            table: {
-                                id: table.id,
-                                schema: table.schema,
-                            },
-                            filter,
-                            options: {
-                                defaultSchema: defaultSchemas[databaseType],
-                            },
-                        })
+                    tables: tables.filter(
+                        (table) =>
+                            filterTable({
+                                table: {
+                                    id: table.id,
+                                    schema: table.schema,
+                                },
+                                filter,
+                                options: {
+                                    defaultSchema: defaultSchemas[databaseType],
+                                },
+                            }) && (showDBViews ? true : !table.isView)
                     ),
                 });
                 setOverlapGraph(overlappingTablesInDiagram);
@@ -655,8 +678,9 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                 });
             }, 500)();
             prevFilter.current = filter;
+            prevShowDBViews.current = showDBViews;
         }
-    }, [filter, fitView, tables, setOverlapGraph, databaseType]);
+    }, [filter, fitView, tables, setOverlapGraph, databaseType, showDBViews]);
 
     useEffect(() => {
         const checkParentAreas = debounce(() => {
@@ -1337,17 +1361,18 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             } else if (event.action === 'load_diagram') {
                 const diagramTables = event.data.diagram.tables ?? [];
                 const overlappingTablesInDiagram = findOverlappingTables({
-                    tables: diagramTables.filter((table) =>
-                        filterTable({
-                            table: {
-                                id: table.id,
-                                schema: table.schema,
-                            },
-                            filter,
-                            options: {
-                                defaultSchema: defaultSchemas[databaseType],
-                            },
-                        })
+                    tables: diagramTables.filter(
+                        (table) =>
+                            filterTable({
+                                table: {
+                                    id: table.id,
+                                    schema: table.schema,
+                                },
+                                filter,
+                                options: {
+                                    defaultSchema: defaultSchemas[databaseType],
+                                },
+                            }) && (showDBViews ? true : !table.isView)
                     ),
                 });
                 setOverlapGraph(overlappingTablesInDiagram);
@@ -1361,6 +1386,7 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             filter,
             setNodes,
             databaseType,
+            showDBViews,
         ]
     );
 
@@ -1438,7 +1464,7 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
         };
     }, []);
 
-    // Handle escape key to cancel floating edge creation and close relationship node
+    // Handle escape key to cancel floating edge creation, close relationship node, and close relationship popover
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -1448,11 +1474,21 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                 }
                 // Also close CreateRelationshipNode if present
                 hideCreateRelationshipNode();
+                // Exit edit table mode
+                exitEditTableMode();
+                // Close relationship edit popover
+                closeRelationshipPopover();
             }
         };
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [tempFloatingEdge, endFloatingEdgeCreation, hideCreateRelationshipNode]);
+    }, [
+        tempFloatingEdge,
+        endFloatingEdgeCreation,
+        hideCreateRelationshipNode,
+        closeRelationshipPopover,
+        exitEditTableMode,
+    ]);
 
     // Add temporary invisible node at cursor position and edge
     const nodesWithCursor = useMemo(() => {
@@ -1514,6 +1550,9 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             // Exit edit table mode
             exitEditTableMode();
 
+            // Close relationship edit popover
+            closeRelationshipPopover();
+
             canvasEvents.emit({
                 action: 'pan_click',
                 data: {
@@ -1528,6 +1567,7 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             exitEditTableMode,
             endFloatingEdgeCreation,
             hideCreateRelationshipNode,
+            closeRelationshipPopover,
         ]
     );
 
@@ -1542,7 +1582,10 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                 <ReactFlow
                     onlyRenderVisibleElements
                     colorMode={effectiveTheme}
-                    className="canvas-cursor-default nodes-animated"
+                    className={cn('nodes-animated', {
+                        'canvas-cursor-multi-select': shiftPressed,
+                        'canvas-cursor-default': !shiftPressed,
+                    })}
                     nodes={nodesWithCursor}
                     edges={edgesWithFloating}
                     onNodesChange={onNodesChangeHandler}
@@ -1563,8 +1606,11 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                     panOnScroll={scrollAction === 'pan'}
                     snapToGrid={shiftPressed || snapToGridEnabled}
                     snapGrid={[20, 20]}
+                    selectionMode={SelectionMode.Full}
                     onPaneClick={onPaneClickHandler}
                     connectionLineComponent={ConnectionLine}
+                    deleteKeyCode={['Backspace', 'Delete']}
+                    multiSelectionKeyCode={['Shift', 'Meta', 'Control']}
                 >
                     <Controls
                         position="top-left"
