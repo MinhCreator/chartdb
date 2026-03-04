@@ -107,12 +107,14 @@ export const TableField: React.FC<TableFieldProps> = ({
                                     <div className="pointer-events-none absolute right-0 top-0 size-0 border-l-[10px] border-t-[10px] border-l-transparent border-t-pink-500" />
                                 </div>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent className="max-w-xs">
                                 <div>
                                     <div className="font-normal text-white/70 dark:text-black/70">
                                         Comment:
                                     </div>
-                                    <div>{field.comments}</div>
+                                    <div className="whitespace-pre-wrap break-words">
+                                        {field.comments}
+                                    </div>
                                 </div>
                             </TooltipContent>
                         </Tooltip>
@@ -140,6 +142,7 @@ export const TableField: React.FC<TableFieldProps> = ({
                                     'side_panel.tables_section.table.no_types_found'
                                 )}
                                 readonly={readonly}
+                                modal={false}
                             />
                         </span>
                     </TooltipTrigger>
@@ -158,7 +161,11 @@ export const TableField: React.FC<TableFieldProps> = ({
                             <TableFieldToggle
                                 pressed={nullable}
                                 onPressedChange={handleNullableToggle}
-                                disabled={readonly || typeRequiresNotNull}
+                                disabled={
+                                    readonly ||
+                                    typeRequiresNotNull ||
+                                    primaryKey
+                                }
                             >
                                 N
                             </TableFieldToggle>

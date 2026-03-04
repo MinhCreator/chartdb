@@ -45,7 +45,13 @@ import {
 } from './table-node/table-node-field';
 import { Toolbar } from './toolbar/toolbar';
 import { useToast } from '@/components/toast/use-toast';
-import { Pencil, AlertTriangle, Magnet, Highlighter } from 'lucide-react';
+import {
+    Pencil,
+    Magnet,
+    AlertTriangle,
+    Highlighter,
+    EyeOff,
+} from 'lucide-react';
 import { Button } from '@/components/button/button';
 import { useLayout } from '@/hooks/use-layout';
 import { useBreakpoint } from '@/hooks/use-breakpoint';
@@ -314,7 +320,12 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
         closeRelationshipPopover,
         events: canvasEvents,
     } = useCanvas();
-    const { filter, loading: filterLoading } = useDiagramFilter();
+    const {
+        filter,
+        loading: filterLoading,
+        hasActiveFilter,
+        resetFilter,
+    } = useDiagramFilter();
     const { checkIfNewTable } = useDiff();
 
     const shouldForceShowTable = useCallback(
@@ -1077,81 +1088,93 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                 childTableMovements.size > 0 ||
                 areaRemoveChanges.length > 0
             ) {
-                updateTablesState((currentTables) => {
-                    const updatedTables = currentTables
-                        .map((currentTable) => {
-                            // Handle area removal - clear parentAreaId
-                            const removedArea = areaRemoveChanges.find(
-                                (change) =>
-                                    change.id === currentTable.parentAreaId
+                updateTablesState(
+                    (currentTables) => {
+                        const updatedTables = currentTables
+                            .map((currentTable) => {
+                                // Handle area removal - clear parentAreaId
+                                const removedArea = areaRemoveChanges.find(
+                                    (change) =>
+                                        change.id === currentTable.parentAreaId
+                                );
+                                if (removedArea) {
+                                    return {
+                                        ...currentTable,
+                                        parentAreaId: null,
+                                    };
+                                }
+
+                                // Handle direct table changes
+                                const positionChange = positionChanges.find(
+                                    (change) => change.id === currentTable.id
+                                );
+                                const sizeChange = sizeChanges.find(
+                                    (change) => change.id === currentTable.id
+                                );
+
+                                // Handle child table movement from area drag
+                                const areaMovement = childTableMovements.get(
+                                    currentTable.id
+                                );
+
+                                if (
+                                    positionChange ||
+                                    sizeChange ||
+                                    areaMovement
+                                ) {
+                                    const x = positionChange?.position?.x;
+                                    const y = positionChange?.position?.y;
+
+                                    return {
+                                        ...currentTable,
+                                        ...(positionChange &&
+                                        x !== undefined &&
+                                        y !== undefined &&
+                                        !isNaN(x) &&
+                                        !isNaN(y)
+                                            ? {
+                                                  x,
+                                                  y,
+                                              }
+                                            : {}),
+                                        ...(areaMovement && !positionChange
+                                            ? {
+                                                  x:
+                                                      currentTable.x +
+                                                      areaMovement.deltaX,
+                                                  y:
+                                                      currentTable.y +
+                                                      areaMovement.deltaY,
+                                              }
+                                            : {}),
+                                        ...(sizeChange
+                                            ? {
+                                                  width:
+                                                      sizeChange.dimensions
+                                                          ?.width ??
+                                                      currentTable.width,
+                                              }
+                                            : {}),
+                                    };
+                                }
+                                return currentTable;
+                            })
+                            .filter(
+                                (table) =>
+                                    !removeChanges.some(
+                                        (change) => change.id === table.id
+                                    )
                             );
-                            if (removedArea) {
-                                return {
-                                    ...currentTable,
-                                    parentAreaId: null,
-                                };
-                            }
 
-                            // Handle direct table changes
-                            const positionChange = positionChanges.find(
-                                (change) => change.id === currentTable.id
-                            );
-                            const sizeChange = sizeChanges.find(
-                                (change) => change.id === currentTable.id
-                            );
-
-                            // Handle child table movement from area drag
-                            const areaMovement = childTableMovements.get(
-                                currentTable.id
-                            );
-
-                            if (positionChange || sizeChange || areaMovement) {
-                                const x = positionChange?.position?.x;
-                                const y = positionChange?.position?.y;
-
-                                return {
-                                    ...currentTable,
-                                    ...(positionChange &&
-                                    x !== undefined &&
-                                    y !== undefined &&
-                                    !isNaN(x) &&
-                                    !isNaN(y)
-                                        ? {
-                                              x,
-                                              y,
-                                          }
-                                        : {}),
-                                    ...(areaMovement && !positionChange
-                                        ? {
-                                              x:
-                                                  currentTable.x +
-                                                  areaMovement.deltaX,
-                                              y:
-                                                  currentTable.y +
-                                                  areaMovement.deltaY,
-                                          }
-                                        : {}),
-                                    ...(sizeChange
-                                        ? {
-                                              width:
-                                                  sizeChange.dimensions
-                                                      ?.width ??
-                                                  currentTable.width,
-                                          }
-                                        : {}),
-                                };
-                            }
-                            return currentTable;
-                        })
-                        .filter(
-                            (table) =>
-                                !removeChanges.some(
-                                    (change) => change.id === table.id
-                                )
-                        );
-
-                    return updatedTables;
-                });
+                        return updatedTables;
+                    },
+                    {
+                        updateHistory:
+                            positionChanges.length > 0 ||
+                            removeChanges.length > 0 ||
+                            sizeChanges.length > 0,
+                    }
+                );
             }
 
             updateOverlappingGraphOnChangesDebounced({
@@ -1402,6 +1425,23 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
             ),
         [overlapGraph]
     );
+
+    // Check if all tables are hidden due to filtering
+    // Derived from filter state directly (not nodes) for better performance
+    const allTablesHiddenByFilter = useMemo(() => {
+        if (!hasActiveFilter || tables.length === 0 || filterLoading) {
+            return false;
+        }
+        // Check if any table passes the filter
+        const visibleTableCount = tables.filter((table) =>
+            filterTable({
+                table: { id: table.id, schema: table.schema },
+                filter,
+                options: { defaultSchema: defaultSchemas[databaseType] },
+            })
+        ).length;
+        return visibleTableCount === 0;
+    }, [hasActiveFilter, tables, filter, databaseType, filterLoading]);
 
     const pulseOverlappingTables = useCallback(() => {
         setHighlightOverlappingTables(true);
@@ -1789,6 +1829,24 @@ export const Canvas: React.FC<CanvasProps> = ({ initialTables }) => {
                         gap={16}
                         size={1}
                     />
+                    {/* Empty state when all tables are hidden by filter */}
+                    {allTablesHiddenByFilter && (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                            <div className="pointer-events-auto flex items-center gap-3 rounded-lg border bg-background/90 px-4 py-3 shadow-sm backdrop-blur-sm">
+                                <EyeOff className="size-5 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">
+                                    {t('canvas.all_tables_hidden')}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => resetFilter()}
+                                >
+                                    {t('canvas.show_all_tables')}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                     {showFilter ? (
                         <CanvasFilter onClose={() => setShowFilter(false)} />
                     ) : null}
