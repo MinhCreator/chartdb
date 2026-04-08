@@ -18,9 +18,9 @@ export const HelmetData: React.FC = () => (
         />
         <meta
             property="og:image"
-            content="https://app.chartdb.io/chartdb.png"
+            content="https://chartdb-sigma.vercel.app/chartdb.png"
         />
-        <meta property="og:url" content="https://app.chartdb.io" />
+        <meta property="og:url" content="https://chartdb-sigma.vercel.app" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta
             name="twitter:title"

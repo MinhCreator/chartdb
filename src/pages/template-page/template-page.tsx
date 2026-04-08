@@ -66,10 +66,10 @@ const TemplatePageComponent: React.FC = () => {
             <Helmet>
                 {template ? (
                     <>
-                        {HOST_URL !== 'https://chartdb.io' ? (
+                        {HOST_URL !== 'https://chartdb-sigma.vercel.app' ? (
                             <link
                                 rel="canonical"
-                                href={`https://chartdb.io/templates/${templateSlug}`}
+                                href={`https://chartdb-sigma.vercel.app/templates/${templateSlug}`}
                             />
                         ) : null}
                         <title>
@@ -126,7 +126,7 @@ const TemplatePageComponent: React.FC = () => {
                     <div className="flex flex-1 justify-start gap-x-3">
                         <div className="flex items-center font-primary">
                             <a
-                                href="https://chartdb.io"
+                                href="https://chartdb-sigma.vercel.app"
                                 className="cursor-pointer"
                                 rel="noreferrer"
                             >
@@ -144,7 +144,7 @@ const TemplatePageComponent: React.FC = () => {
                     </div>
                     <div className="flex flex-1 justify-end">
                         <iframe
-                            src={`https://ghbtns.com/github-btn.html?user=chartdb&repo=chartdb&type=star&size=large&text=false`}
+                            src={`https://ghbtns.com/github-btn.html?user=MinhCreator&repo=chartdb&type=star&size=large&text=false`}
                             width="40"
                             height="30"
                             title="GitHub"
