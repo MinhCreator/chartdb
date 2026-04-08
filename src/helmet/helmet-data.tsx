@@ -32,7 +32,7 @@ export const HelmetData: React.FC = () => (
         />
         <meta
             name="twitter:image"
-            content="https://github.com/chartdb/chartdb/raw/main/public/chartdb.png"
+            content="https://github.com/MinhCreator/chartdb/raw/main/public/chartdb.png"
         />
         <title>ChartDB - Database schema diagrams visualizer</title>
     </Helmet>
